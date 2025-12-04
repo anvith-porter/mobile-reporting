@@ -8,6 +8,7 @@ import json
 import sys
 from datetime import datetime, timedelta
 
+
 # Google Play Vitals imports (optional)
 try:
     import google.auth
@@ -1084,7 +1085,8 @@ async def open_firebase_console(report_days: int):
         user_data_dir = os.path.expanduser("~/.browser_use_firebase")
         os.makedirs(user_data_dir, exist_ok=True)
         browser_config = {
-            "user_data_dir": user_data_dir
+            "user_data_dir": user_data_dir,
+            "extensions": []  # Disable extensions to avoid download/extraction delays
         }
         browser = Browser(**browser_config)
         

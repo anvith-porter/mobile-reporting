@@ -19,7 +19,8 @@ async def save_session():
     print(f"   And exported to: {storage_path} for GitHub Actions")
     
     browser_config = {
-        "user_data_dir": user_data_dir
+        "user_data_dir": user_data_dir,
+        "extensions": []  # Disable extensions to avoid download/extraction delays
     }
     
     browser = Browser(**browser_config)
