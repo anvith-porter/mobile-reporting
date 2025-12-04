@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Vitals Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+            background: #0f172a;
+            min-height: 100vh;
+            padding: 12px;
+            color: #e2e8f0;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .header h1 {
+            color: #60a5fa;
+            margin-bottom: 4px;
+            font-size: 1.75em;
+            font-weight: 700;
+        }
+
+        .header .meta {
+            color: #94a3b8;
+            font-size: 0.8em;
+            margin-top: 4px;
+        }
+
+        .file-input-section {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        input[type="file"] {
+            padding: 8px 12px;
+            border: 1px dashed #475569;
+            border-radius: 6px;
+            cursor: pointer;
+            flex: 1;
+            background: rgba(15, 23, 42, 0.5);
+            color: #e2e8f0;
+            font-size: 0.9em;
+        }
+
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .app-selector {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .app-tab {
+            padding: 8px 16px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: all 0.2s;
+            background: rgba(15, 23, 42, 0.5);
+            color: #cbd5e1;
+        }
+
+        .app-tab:hover {
+            border-color: #3b82f6;
+            color: #60a5fa;
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .app-tab.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .app-view {
+            display: none;
+        }
+
+        .app-view.active {
+            display: block;
+        }
+
+        .app-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            margin-bottom: 16px;
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .app-header h2 {
+            color: #60a5fa;
+            font-size: 1.4em;
+            font-weight: 700;
+        }
+
+        .platform-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .badge-android {
+            background: #10b981;
+            color: white;
+        }
+
+        .badge-ios {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .metric-card {
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #e2e8f0;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .metric-card:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .metric-card.good {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .metric-card.warning {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .metric-card.danger {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .metric-label {
+            font-size: 0.75em;
+            opacity: 0.8;
+            margin-bottom: 6px;
+            color: #94a3b8;
+        }
+
+        .metric-value {
+            font-size: 1.6em;
+            font-weight: 700;
+        }
+
+        .metric-unit {
+            font-size: 0.55em;
+            opacity: 0.7;
+        }
+
+        .section {
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            color: #60a5fa;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 200px;
+            margin-bottom: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            font-size: 0.9em;
+        }
+
+        th, td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        th {
+            background: rgba(15, 23, 42, 0.6);
+            font-weight: 600;
+            color: #60a5fa;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        td {
+            color: #cbd5e1;
+        }
+
+        .impact-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .impact-high {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .impact-medium {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .impact-low {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 12px 0;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 30px;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #60a5fa;
+            font-size: 1em;
+        }
+
+        .platform-section {
+            margin-bottom: 20px;
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 6px;
+        }
+
+        .platform-title {
+            font-size: 1.2em;
+            color: #60a5fa;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .app-selector {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 App Vitals Dashboard</h1>
+            <div class="meta" id="metaInfo">Load a JSON file to view vitals data</div>
+        </div>
+
+        <div class="file-input-section">
+            <div class="file-input-wrapper">
+                <input type="file" id="jsonFile" accept=".json" />
+            </div>
+        </div>
+
+        <div id="appSelector" class="app-selector" style="display: none;"></div>
+        <div id="dashboard"></div>
+    </div>
+
+    <script>
+        let chartInstances = [];
+        let currentData = null;
+
+        function loadFile() {
+            const fileInput = document.getElementById('jsonFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a JSON file');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    currentData = data;
+                    renderDashboard(data);
+                } catch (error) {
+                    document.getElementById('dashboard').innerHTML = 
+                        `<div class="error-message">Error parsing JSON: ${error.message}</div>`;
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function renderDashboard(data) {
+            // Destroy existing charts
+            chartInstances.forEach(chart => chart.destroy());
+            chartInstances = [];
+
+            const dashboard = document.getElementById('dashboard');
+            const metaInfo = document.getElementById('metaInfo');
+            const appSelector = document.getElementById('appSelector');
+            
+            // Update meta info
+            const timestamp = data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Unknown';
+            const days = data.date_range_days || 'N/A';
+            metaInfo.textContent = `Report Period: ${days} days | Generated: ${timestamp}`;
+
+            if (!data.apps || Object.keys(data.apps).length === 0) {
+                dashboard.innerHTML = '<div class="no-data">No app data found in JSON file</div>';
+                appSelector.style.display = 'none';
+                return;
+            }
+
+            // Create app selector tabs
+            let selectorHtml = '';
+            let dashboardHtml = '';
+            const appKeys = Object.keys(data.apps);
+            
+            appKeys.forEach((appKey, index) => {
+                const appData = data.apps[appKey];
+                const appName = appKey.charAt(0).toUpperCase() + appKey.slice(1);
+                
+                // Tab
+                selectorHtml += `<div class="app-tab ${index === 0 ? 'active' : ''}" data-app="${appKey}" onclick="switchApp('${appKey}', this)">${appName}</div>`;
+                
+                // App view
+                dashboardHtml += `<div id="app-${appKey}" class="app-view ${index === 0 ? 'active' : ''}">`;
+                dashboardHtml += renderAppCard(appKey, appData);
+                dashboardHtml += '</div>';
+            });
+            
+            appSelector.innerHTML = selectorHtml;
+            appSelector.style.display = 'flex';
+            dashboard.innerHTML = dashboardHtml;
+
+            // Render charts after DOM is updated
+            setTimeout(() => {
+                renderCharts(data.apps);
+            }, 100);
+        }
+
+        function switchApp(appKey, tabElement) {
+            // Update tabs
+            document.querySelectorAll('.app-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            if (tabElement) {
+                tabElement.classList.add('active');
+            } else {
+                // Fallback: find tab by data attribute
+                document.querySelector(`.app-tab[data-app="${appKey}"]`)?.classList.add('active');
+            }
+            
+            // Update views
+            document.querySelectorAll('.app-view').forEach(view => {
+                view.classList.remove('active');
+            });
+            const targetView = document.getElementById(`app-${appKey}`);
+            if (targetView) {
+                targetView.classList.add('active');
+            }
+        }
+
+        function renderAppCard(appKey, appData) {
+            const appName = appKey.charAt(0).toUpperCase() + appKey.slice(1);
+            
+            if (appData.error) {
+                return `
+                    <div class="app-card">
+                        <div class="app-header">
+                            <h2>${appName} App</h2>
+                        </div>
+                        <div class="error-message">Error: ${appData.error}</div>
+                    </div>
+                `;
+            }
+
+            let html = `
+                <div class="app-card">
+                    <div class="app-header">
+                        <h2>${appName} App</h2>
+                        <div>
+                            ${appData.android ? '<span class="platform-badge badge-android">Android</span>' : ''}
+                            ${appData.ios ? '<span class="platform-badge badge-ios">iOS</span>' : ''}
+                        </div>
+                    </div>
+            `;
+
+            // Android Metrics
+            if (appData.android) {
+                html += renderPlatformSection('Android', appData.android, appKey, 'android', appData.google_play_vitals);
+            }
+
+            // iOS Metrics
+            if (appData.ios) {
+                html += renderPlatformSection('iOS', appData.ios, appKey, 'ios');
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        function renderPlatformSection(platform, data, appKey, platformKey, googlePlayVitals = null) {
+            const crashFreeFatal = data.crash_free_rates?.fatal || null;
+            const crashFreeNonFatal = data.crash_free_rates?.non_fatal || null;
+            
+            let html = `
+                <div class="platform-section">
+                    <div class="platform-title">${platform} Metrics</div>
+                    <div class="metrics-grid">
+            `;
+
+            // Crash-Free Rates
+            if (crashFreeFatal !== null) {
+                const cardClass = getMetricClass(crashFreeFatal, true);
+                html += `
+                    <div class="metric-card ${cardClass}">
+                        <div class="metric-label">Fatal Crash-Free Rate</div>
+                        <div class="metric-value">${crashFreeFatal.toFixed(2)}<span class="metric-unit">%</span></div>
+                    </div>
+                `;
+            }
+
+            if (crashFreeNonFatal !== null) {
+                const cardClass = getMetricClass(crashFreeNonFatal, true);
+                html += `
+                    <div class="metric-card ${cardClass}">
+                        <div class="metric-label">Non-Fatal Crash-Free Rate</div>
+                        <div class="metric-value">${crashFreeNonFatal.toFixed(2)}<span class="metric-unit">%</span></div>
+                    </div>
+                `;
+            }
+
+            // P90 Launch Time
+            if (data.p90_launch_time_seconds !== null && data.p90_launch_time_seconds !== undefined) {
+                const cardClass = getMetricClass(data.p90_launch_time_seconds, false, 3.0);
+                html += `
+                    <div class="metric-card ${cardClass}">
+                        <div class="metric-label">P90 Launch Time</div>
+                        <div class="metric-value">${data.p90_launch_time_seconds}<span class="metric-unit">s</span></div>
+                    </div>
+                `;
+            }
+
+            // Dominant Release
+            if (data.dominant_release) {
+                html += `
+                    <div class="metric-card">
+                        <div class="metric-label">Dominant Release</div>
+                        <div class="metric-value" style="font-size: 1.5em;">${data.dominant_release}</div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+
+            // Chart for crash-free rates (iOS only)
+            if (platformKey === 'ios' && (crashFreeFatal !== null || crashFreeNonFatal !== null)) {
+                html += `<div class="chart-container"><canvas id="chart-${appKey}-${platformKey}"></canvas></div>`;
+            }
+
+            // Google Play Vitals (Android only, in place of chart)
+            if (platformKey === 'android' && googlePlayVitals) {
+                html += renderGooglePlayVitals(googlePlayVitals);
+            }
+
+            // Top Crashes
+            if (data.top_crashes && data.top_crashes.length > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">Top 3 Crashes</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Name</th>
+                                    <th>Impact</th>
+                                    <th>Devices</th>
+                                    <th>Events</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                data.top_crashes.forEach(crash => {
+                    html += `
+                        <tr>
+                            <td>#${crash.rank}</td>
+                            <td>${escapeHtml(crash.name)}</td>
+                            <td><span class="impact-badge ${getImpactClass(crash.impact_percentage)}">${crash.impact_percentage}%</span></td>
+                            <td>${crash.impacted_devices.toLocaleString()}</td>
+                            <td>${crash.events.toLocaleString()}</td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table></div>';
+            }
+
+            // Top Non-Fatals
+            if (data.top_non_fatals && data.top_non_fatals.length > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">Top 3 Non-Fatal Issues</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Name</th>
+                                    <th>Impact</th>
+                                    <th>Devices</th>
+                                    <th>Events</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                data.top_non_fatals.forEach(issue => {
+                    html += `
+                        <tr>
+                            <td>#${issue.rank}</td>
+                            <td>${escapeHtml(issue.name)}</td>
+                            <td><span class="impact-badge ${getImpactClass(issue.impact_percentage)}">${issue.impact_percentage}%</span></td>
+                            <td>${issue.impacted_devices.toLocaleString()}</td>
+                            <td>${issue.events.toLocaleString()}</td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table></div>';
+            }
+
+            // ANRs
+            if (data.all_anrs && data.all_anrs.length > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">Top 3 ANRs</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Name</th>
+                                    <th>Impact</th>
+                                    <th>Devices</th>
+                                    <th>Events</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                data.all_anrs.forEach(anr => {
+                    html += `
+                        <tr>
+                            <td>#${anr.rank}</td>
+                            <td>${escapeHtml(anr.name)}</td>
+                            <td><span class="impact-badge ${getImpactClass(anr.impact_percentage)}">${anr.impact_percentage}%</span></td>
+                            <td>${anr.impacted_devices.toLocaleString()}</td>
+                            <td>${anr.events.toLocaleString()}</td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table></div>';
+            }
+
+            // User Perceived ANRs (Play Console)
+            if (data.up_anrs && data.up_anrs.length > 0) {
+                html += `
+                    <div class="section">
+                        <div class="section-title">Top 3 UP ANRs (Play Console)</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Name</th>
+                                    <th>Impact</th>
+                                    <th>Users</th>
+                                    <th>Events</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                data.up_anrs.forEach((anr, idx) => {
+                    html += `
+                        <tr>
+                            <td>#${idx + 1}</td>
+                            <td>${escapeHtml(anr.name)}</td>
+                            <td><span class="impact-badge ${getImpactClass(anr.impact_percentage)}">${anr.impact_percentage.toFixed(2)}%</span></td>
+                            <td>${anr.affected_users.toLocaleString()}</td>
+                            <td>${anr.events.toLocaleString()}</td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table></div>';
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        function renderGooglePlayVitals(vitals) {
+            let html = `
+                    <div class="section">
+                        <div class="section-title">Google Play Vitals</div>
+                        <div class="metrics-grid">
+            `;
+
+            if (vitals.anr_rate !== null && vitals.anr_rate !== undefined) {
+                html += `
+                    <div class="metric-card ${getMetricClass(vitals.anr_rate, false, 0.1)}">
+                        <div class="metric-label">ANR Rate</div>
+                        <div class="metric-value">${vitals.anr_rate.toFixed(3)}<span class="metric-unit">%</span></div>
+                    </div>
+                `;
+            }
+
+            if (vitals.user_perceived_anr_rate !== null && vitals.user_perceived_anr_rate !== undefined) {
+                html += `
+                    <div class="metric-card ${getMetricClass(vitals.user_perceived_anr_rate, false, 0.1)}">
+                        <div class="metric-label">UP ANR Rate</div>
+                        <div class="metric-value">${vitals.user_perceived_anr_rate.toFixed(3)}<span class="metric-unit">%</span></div>
+                    </div>
+                `;
+            }
+
+            if (vitals.crash_rate !== null && vitals.crash_rate !== undefined) {
+                html += `
+                    <div class="metric-card ${getMetricClass(vitals.crash_rate, false, 0.1)}">
+                        <div class="metric-label">Crash Rate</div>
+                        <div class="metric-value">${vitals.crash_rate.toFixed(3)}<span class="metric-unit">%</span></div>
+                    </div>
+                `;
+            }
+
+            if (vitals.user_perceived_crash_rate !== null && vitals.user_perceived_crash_rate !== undefined) {
+                html += `
+                    <div class="metric-card ${getMetricClass(vitals.user_perceived_crash_rate, false, 0.1)}">
+                        <div class="metric-label">UP Crash Rate</div>
+                        <div class="metric-value">${vitals.user_perceived_crash_rate.toFixed(3)}<span class="metric-unit">%</span></div>
+                    </div>
+                `;
+            }
+
+            if (vitals.slow_start_rate !== null && vitals.slow_start_rate !== undefined) {
+                html += `
+                    <div class="metric-card ${getMetricClass(vitals.slow_start_rate, false, 1.0)}">
+                        <div class="metric-label">Slow Start Rate</div>
+                        <div class="metric-value">${vitals.slow_start_rate.toFixed(3)}<span class="metric-unit">%</span></div>
+                    </div>
+                `;
+            }
+
+            if (vitals.excessive_wakeup_rate !== null && vitals.excessive_wakeup_rate !== undefined) {
+                html += `
+                    <div class="metric-card ${getMetricClass(vitals.excessive_wakeup_rate, false, 0.1)}">
+                        <div class="metric-label">Excessive Wakeup Rate</div>
+                        <div class="metric-value">${vitals.excessive_wakeup_rate.toFixed(3)}<span class="metric-unit">%</span></div>
+                    </div>
+                `;
+            }
+
+            if (vitals.stuck_wakelock_rate !== null && vitals.stuck_wakelock_rate !== undefined) {
+                html += `
+                    <div class="metric-card ${getMetricClass(vitals.stuck_wakelock_rate, false, 0.1)}">
+                        <div class="metric-label">Stuck Wakelock Rate</div>
+                        <div class="metric-value">${vitals.stuck_wakelock_rate.toFixed(3)}<span class="metric-unit">%</span></div>
+                    </div>
+                `;
+            }
+
+            if (vitals.user_perceived_lmk_rate !== null && vitals.user_perceived_lmk_rate !== undefined) {
+                html += `
+                    <div class="metric-card ${getMetricClass(vitals.user_perceived_lmk_rate, false, 0.1)}">
+                        <div class="metric-label">UP LMK Rate</div>
+                        <div class="metric-value">${vitals.user_perceived_lmk_rate.toFixed(3)}<span class="metric-unit">%</span></div>
+                    </div>
+                `;
+            }
+
+            html += '</div></div>';
+            return html;
+        }
+
+        function renderCharts(apps) {
+            for (const [appKey, appData] of Object.entries(apps)) {
+                if (appData.error) continue;
+
+                // iOS chart only (Android chart removed)
+                if (appData.ios) {
+                    const fatal = appData.ios.crash_free_rates?.fatal;
+                    const nonFatal = appData.ios.crash_free_rates?.non_fatal;
+                    if (fatal !== null || nonFatal !== null) {
+                        createChart(`chart-${appKey}-ios`, 'iOS Crash-Free Rates', fatal, nonFatal);
+                    }
+                }
+            }
+        }
+
+        function createChart(canvasId, label, fatal, nonFatal) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const data = [];
+            const labels = [];
+            const colors = [];
+
+            if (fatal !== null) {
+                data.push(fatal);
+                labels.push('Fatal');
+                colors.push(getColorForValue(fatal, true));
+            }
+            if (nonFatal !== null) {
+                data.push(nonFatal);
+                labels.push('Non-Fatal');
+                colors.push(getColorForValue(nonFatal, true));
+            }
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Crash-Free Rate (%)',
+                        data: data,
+                        backgroundColor: colors,
+                        borderColor: colors,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: label,
+                            font: {
+                                size: 13,
+                                weight: '600'
+                            },
+                            color: '#cbd5e1',
+                            padding: {
+                                bottom: 8
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                color: '#94a3b8',
+                                font: {
+                                    size: 11
+                                },
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#94a3b8',
+                                font: {
+                                    size: 11
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            chartInstances.push(chart);
+        }
+
+        function getMetricClass(value, isPercentage, threshold = null) {
+            if (isPercentage) {
+                // For percentages, higher is better
+                if (value >= 99) return 'good';
+                if (value >= 95) return 'warning';
+                return 'danger';
+            } else {
+                // For other metrics, lower is better
+                if (threshold === null) return '';
+                if (value <= threshold) return 'good';
+                if (value <= threshold * 2) return 'warning';
+                return 'danger';
+            }
+        }
+
+        function getColorForValue(value, isPercentage) {
+            if (isPercentage) {
+                if (value >= 99) return '#38ef7d';
+                if (value >= 95) return '#f5576c';
+                return '#fee140';
+            }
+            return '#667eea';
+        }
+
+        function getImpactClass(impact) {
+            if (impact >= 5) return 'impact-high';
+            if (impact >= 1) return 'impact-medium';
+            return 'impact-low';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Allow drag and drop
+        const dashboard = document.getElementById('dashboard');
+        const fileInput = document.getElementById('jsonFile');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dashboard.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dashboard.addEventListener(eventName, () => {
+                dashboard.style.border = '2px dashed #3b82f6';
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dashboard.addEventListener(eventName, () => {
+                dashboard.style.border = 'none';
+            }, false);
+        });
+
+        dashboard.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+            loadFile();
+        }
+
+        // Auto-load file when selected
+        fileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                loadFile();
+            }
+        });
+    </script>
+</body>
+</html>
+

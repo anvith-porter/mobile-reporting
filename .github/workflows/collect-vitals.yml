@@ -1,0 +1,93 @@
+name: Collect App Vitals
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Weekly on Monday 9 AM UTC
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  collect-vitals:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium
+      
+      - name: Decode Google Play service account key
+        env:
+          GOOGLE_PLAY_KEY_BASE64: ${{ secrets.GOOGLE_PLAY_KEY_BASE64 }}
+        run: |
+          if [ -z "$GOOGLE_PLAY_KEY_BASE64" ]; then
+            echo "⚠️  GOOGLE_PLAY_KEY_BASE64 secret not set, skipping Google Play Vitals"
+            echo "⚠️  Note: Google Play Vitals data will not be collected"
+          else
+            echo "$GOOGLE_PLAY_KEY_BASE64" | base64 -d > googleplaykey.json
+            echo "✅ Google Play service account key decoded"
+            ls -lh googleplaykey.json
+          fi
+      
+      - name: Run vitals collection
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT: googleplaykey.json
+        run: |
+          python automate_vitals.py
+      
+      - name: Upload results
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitals-data
+          path: crash_data_*.json
+          retention-days: 30
+      
+      - name: Export to BigQuery
+        if: success()
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          BIGQUERY_DATASET: ${{ secrets.BIGQUERY_DATASET }}
+          BIGQUERY_TABLE: ${{ secrets.BIGQUERY_TABLE }}
+        run: |
+          # Set defaults if secrets are not provided
+          DATASET="${BIGQUERY_DATASET:-porter_apps}"
+          TABLE="${BIGQUERY_TABLE:-weekly_report}"
+          
+          # Use Google Play service account key for BigQuery authentication
+          if [ ! -f "googleplaykey.json" ]; then
+            echo "⚠️  googleplaykey.json not found, skipping BigQuery export"
+            exit 0
+          fi
+          
+          # Find the latest JSON file
+          LATEST_JSON=$(ls -t crash_data_*.json | head -n 1)
+          
+          if [ -z "$LATEST_JSON" ]; then
+            echo "⚠️  No JSON file found to export"
+            exit 0
+          fi
+          
+          if [ -z "$GCP_PROJECT_ID" ]; then
+            echo "⚠️  GCP_PROJECT_ID secret not set, skipping BigQuery export"
+            exit 0
+          fi
+          
+          echo "📤 Exporting $LATEST_JSON to BigQuery..."
+          echo "   Project: $GCP_PROJECT_ID"
+          echo "   Dataset: $DATASET"
+          echo "   Table: $TABLE"
+          python scripts/export_to_bigquery.py "$LATEST_JSON" \
+            --project "$GCP_PROJECT_ID" \
+            --dataset "$DATASET" \
+            --table "$TABLE" \
+            --credentials "googleplaykey.json"
+
+
+

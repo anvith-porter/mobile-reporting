@@ -1,0 +1,9 @@
+playwright>=1.40.0
+browser-use>=0.1.0
+google-auth>=2.23.0
+google-auth-requests>=0.1.1
+google-cloud-bigquery>=3.11.0
+requests>=2.31.0
+
+
+
