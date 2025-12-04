@@ -1093,11 +1093,23 @@ async def open_firebase_console(report_days: int):
         await browser.start()
         print("✅ Browser started")
         
-        # Navigate to a simple page first to get a page object (avoid Firebase Console timeout)
-        # Use about:blank which loads instantly
+        # Try to get page first - browser.start() might have created one
         print("📄 Getting page object...")
-        await browser.navigate_to("about:blank")
         page = await browser.get_current_page()
+        
+        # If no page exists, create one by navigating to about:blank
+        # Use asyncio.wait_for to add a timeout in case navigate_to hangs
+        if page is None:
+            print("   No page found, creating one...")
+            try:
+                await asyncio.wait_for(
+                    browser.navigate_to("about:blank"),
+                    timeout=10.0  # 10 second timeout
+                )
+                page = await browser.get_current_page()
+            except asyncio.TimeoutError:
+                print("⚠️  Navigation timeout, trying to get page anyway...")
+                page = await browser.get_current_page()
         
         if page is None:
             raise RuntimeError("Failed to get page from browser. Browser may not have started properly.")
