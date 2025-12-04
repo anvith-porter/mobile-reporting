@@ -1089,19 +1089,26 @@ async def open_firebase_console(report_days: int):
         browser = Browser(**browser_config)
         
         # Start the browser first
+        print("🔧 Starting browser...")
         await browser.start()
+        print("✅ Browser started")
         
-        # Navigate to a page to get a page object
-        await browser.navigate_to("https://console.firebase.google.com")
+        # Navigate to a simple page first to get a page object (avoid Firebase Console timeout)
+        # Use about:blank which loads instantly
+        print("📄 Getting page object...")
+        await browser.navigate_to("about:blank")
         page = await browser.get_current_page()
         
         if page is None:
             raise RuntimeError("Failed to get page from browser. Browser may not have started properly.")
         
+        print("✅ Page obtained")
+        
         # Set timeouts and disable heavy resources
         page.set_default_timeout(60000)  # 60 second timeout
         await page.route("**/*.{png,jpg,jpeg,gif,svg,ico}", lambda route: route.abort())  # Block images
         await page.route("**/*.{css,woff,woff2,ttf}", lambda route: route.abort())  # Block fonts/CSS
+        print("✅ Page configured")
         
         # Initialize final data structure
         all_apps_data = {
