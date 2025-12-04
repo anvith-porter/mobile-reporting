@@ -22,7 +22,8 @@ async def save_session():
         "user_data_dir": user_data_dir
     }
     
-    async with Browser(**browser_config) as browser:
+    browser = Browser(**browser_config)
+    try:
         page = await browser.get_current_page()
         
         # Navigate to Firebase Console
@@ -91,6 +92,12 @@ async def save_session():
             print(f"   Traceback: {traceback.format_exc()}")
             print(f"   Session is still saved to: {user_data_dir}")
             print("   This is fine - browser_use will use this directory automatically.")
+    finally:
+        # Clean up browser
+        try:
+            await browser.close()
+        except:
+            pass
 
 if __name__ == "__main__":
     asyncio.run(save_session())

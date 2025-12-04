@@ -1077,6 +1077,7 @@ async def open_firebase_console(report_days: int):
     """
     Collect vitals data for all apps in APPS_CONFIG
     """
+    browser = None
     try:
         # Create a browser instance and get a page
         # Create user data directory for session persistence
@@ -1085,61 +1086,68 @@ async def open_firebase_console(report_days: int):
         browser_config = {
             "user_data_dir": user_data_dir
         }
-        async with Browser(**browser_config) as browser:
-            page = await browser.get_current_page()
-            
-            # Set timeouts and disable heavy resources
-            page.set_default_timeout(60000)  # 60 second timeout
-            await page.route("**/*.{png,jpg,jpeg,gif,svg,ico}", lambda route: route.abort())  # Block images
-            await page.route("**/*.{css,woff,woff2,ttf}", lambda route: route.abort())  # Block fonts/CSS
-            
-            # Initialize final data structure
-            all_apps_data = {
-                "timestamp": datetime.now().isoformat(),
-                "date_range_days": DATE_RANGE_DAYS,
-                "apps": {}
-            }
-            
-            # Collect data for each app
-            for app_key, app_config in APPS_CONFIG.items():
-                app_data = await collect_app_data(report_days, app_key, app_config, page)
-                if app_data:
-                    all_apps_data["apps"][app_key] = app_data
-                    # Reset flags for next app
-                    await asyncio.sleep(2)  # Brief pause between apps
-            
-            print("\n" + "="*60)
-            print("✅ All data collection complete!")
-            print("="*60)
+        browser = Browser(**browser_config)
+        page = await browser.get_current_page()
+        
+        # Set timeouts and disable heavy resources
+        page.set_default_timeout(60000)  # 60 second timeout
+        await page.route("**/*.{png,jpg,jpeg,gif,svg,ico}", lambda route: route.abort())  # Block images
+        await page.route("**/*.{css,woff,woff2,ttf}", lambda route: route.abort())  # Block fonts/CSS
+        
+        # Initialize final data structure
+        all_apps_data = {
+            "timestamp": datetime.now().isoformat(),
+            "date_range_days": DATE_RANGE_DAYS,
+            "apps": {}
+        }
+        
+        # Collect data for each app
+        for app_key, app_config in APPS_CONFIG.items():
+            app_data = await collect_app_data(report_days, app_key, app_config, page)
+            if app_data:
+                all_apps_data["apps"][app_key] = app_data
+                # Reset flags for next app
+                await asyncio.sleep(2)  # Brief pause between apps
+        
+        print("\n" + "="*60)
+        print("✅ All data collection complete!")
+        print("="*60)
 
-            # Save data to JSON file
-            output_filename = f"crash_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            try:
-                with open(output_filename, 'w') as f:
-                    json.dump(all_apps_data, f, indent=2)
-                print(f"📄 Data saved to {output_filename}")
-            except Exception as e:
-                print(f"❌ Error saving data to file: {e}")
+        # Save data to JSON file
+        output_filename = f"crash_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        try:
+            with open(output_filename, 'w') as f:
+                json.dump(all_apps_data, f, indent=2)
+            print(f"📄 Data saved to {output_filename}")
+        except Exception as e:
+            print(f"❌ Error saving data to file: {e}")
 
-            # Print summary for all apps
-            print(f"\n📋 Summary:")
-            for app_key, app_data in all_apps_data["apps"].items():
-                print(f"\n  {app_data.get('app_name', app_key)}:")
-                print(f"    Android Fatal Crash-Free Rate: {app_data['android']['crash_free_rates'].get('fatal', 'N/A')}")
-                print(f"    Android Non-Fatal Crash-Free Rate: {app_data['android']['crash_free_rates'].get('non_fatal', 'N/A')}")
-                if app_data.get('ios', {}).get('crash_free_rates'):
-                    print(f"    iOS Fatal Crash-Free Rate: {app_data['ios']['crash_free_rates'].get('fatal', 'N/A')}")
-                    print(f"    iOS Non-Fatal Crash-Free Rate: {app_data['ios']['crash_free_rates'].get('non_fatal', 'N/A')}")
-                print(f"    Android Dominant Release: {app_data['android']['dominant_release']}")
-                if app_data.get('ios', {}).get('dominant_release'):
-                    print(f"    iOS Dominant Release: {app_data['ios']['dominant_release']}")
-                if app_data['android'].get('p90_launch_time_seconds'):
-                    print(f"    Android P90 Launch Time: {app_data['android']['p90_launch_time_seconds']}s")
+        # Print summary for all apps
+        print(f"\n📋 Summary:")
+        for app_key, app_data in all_apps_data["apps"].items():
+            print(f"\n  {app_data.get('app_name', app_key)}:")
+            print(f"    Android Fatal Crash-Free Rate: {app_data['android']['crash_free_rates'].get('fatal', 'N/A')}")
+            print(f"    Android Non-Fatal Crash-Free Rate: {app_data['android']['crash_free_rates'].get('non_fatal', 'N/A')}")
+            if app_data.get('ios', {}).get('crash_free_rates'):
+                print(f"    iOS Fatal Crash-Free Rate: {app_data['ios']['crash_free_rates'].get('fatal', 'N/A')}")
+                print(f"    iOS Non-Fatal Crash-Free Rate: {app_data['ios']['crash_free_rates'].get('non_fatal', 'N/A')}")
+            print(f"    Android Dominant Release: {app_data['android']['dominant_release']}")
+            if app_data.get('ios', {}).get('dominant_release'):
+                print(f"    iOS Dominant Release: {app_data['ios']['dominant_release']}")
+            if app_data['android'].get('p90_launch_time_seconds'):
+                print(f"    Android P90 Launch Time: {app_data['android']['p90_launch_time_seconds']}s")
 
     except KeyboardInterrupt:
         print("\nClosing browser...")
     except Exception as e:
         print(f"Error: {e}")
+    finally:
+        # Clean up browser
+        if browser:
+            try:
+                await browser.close()
+            except:
+                pass
 
 # Alternative: Even simpler with just opening the URL
 async def simple_open_url():
