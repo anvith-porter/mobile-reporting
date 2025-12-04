@@ -24,9 +24,17 @@ async def save_session():
     
     browser = Browser(**browser_config)
     try:
+        # Start the browser first
+        await browser.start()
+        
+        # Navigate to initialize and get a page
+        await browser.navigate_to("https://console.firebase.google.com")
         page = await browser.get_current_page()
         
-        # Navigate to Firebase Console
+        if page is None:
+            raise RuntimeError("Failed to get page from browser. Browser may not have started properly.")
+        
+        # Navigate to Firebase Console (already done, but ensure page is ready)
         print("\n🌐 Navigating to Firebase Console...")
         try:
             await page.goto("https://console.firebase.google.com", wait_until="domcontentloaded", timeout=30000)

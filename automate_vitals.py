@@ -1087,7 +1087,16 @@ async def open_firebase_console(report_days: int):
             "user_data_dir": user_data_dir
         }
         browser = Browser(**browser_config)
+        
+        # Start the browser first
+        await browser.start()
+        
+        # Navigate to a page to get a page object
+        await browser.navigate_to("https://console.firebase.google.com")
         page = await browser.get_current_page()
+        
+        if page is None:
+            raise RuntimeError("Failed to get page from browser. Browser may not have started properly.")
         
         # Set timeouts and disable heavy resources
         page.set_default_timeout(60000)  # 60 second timeout
